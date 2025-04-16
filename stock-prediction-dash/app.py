@@ -118,7 +118,7 @@ def update_data(n, val):  # inpur parameter(s)
         if val == None:
             raise PreventUpdate
         else:
-            yf.pdr_override()
+            # yf.pdr_override()
             ticker = yf.Ticker(val)
             inf = ticker.info
             df = pd.DataFrame().from_dict(inf, orient="index").T
