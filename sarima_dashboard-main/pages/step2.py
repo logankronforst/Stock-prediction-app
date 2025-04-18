@@ -12,7 +12,7 @@ dash.register_page(__name__, name='2-Stationarity', title='SARIMA | 2-Stationari
 from assets.fig_layout import my_figlayout, my_linelayout
 from assets.acf_pacf_plots import acf_pacf
 
-_data_airp = pd.read_csv('data/AirPassengers.csv', usecols = [0,1], names=['Time','Values'], skiprows=1)
+_data_airp = pd.read_csv('/workspaces/CS329E/sarima_dashboard-main/data/AirPassengers.csv', usecols = [0,1], names=['Time','Values'], skiprows=1)
 _data_airp['Time'] = pd.to_datetime(_data_airp['Time'], errors='raise')
 
 ### PAGE LAYOUT ###############################################################################################################

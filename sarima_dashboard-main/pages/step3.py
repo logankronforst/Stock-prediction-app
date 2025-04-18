@@ -9,7 +9,7 @@ dash.register_page(__name__, name='3-Model Selection', title='SARIMA | 3-Model S
 
 from assets.sarima_gridsearch import sarima_grid_search
 
-_data_airp = pd.read_csv('data/AirPassengers.csv', usecols = [0,1], names=['Time','Values'], skiprows=1)
+_data_airp = pd.read_csv('/workspaces/CS329E/sarima_dashboard-main/data/AirPassengers.csv', usecols = [0,1], names=['Time','Values'], skiprows=1)
 _data_airp['Time'] = pd.to_datetime(_data_airp['Time'], errors='raise')
 
 ### PAGE LAYOUT ###############################################################################################################

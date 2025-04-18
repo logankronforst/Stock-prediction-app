@@ -9,7 +9,7 @@ _nav = dbc.Container([
                 html.I(className="fa-solid fa-chart-simple fa-2x")],
 		    className='logo')
         ], width = 4),
-        dbc.Col([html.H1(['Sarima Tuner'], className='app-brand')], width = 8)
+        dbc.Col([html.H1(['Stock Prediction'], className='app-brand')], width = 8)
 	]),
 	dbc.Row([
         dbc.Nav(
