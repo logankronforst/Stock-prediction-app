@@ -3,6 +3,7 @@ from dash import html, dcc, callback, Input, Output
 import dash_bootstrap_components as dbc
 import pandas as pd
 import plotly.graph_objects as go
+import yfinance as yf
 
 dash.register_page(__name__, name='1-Data set up', title='SARIMA | 1-Data set up')
 
@@ -10,6 +11,22 @@ from assets.fig_layout import my_figlayout, my_linelayout
 
 _data_airp = pd.read_csv('/workspaces/CS329E/sarima_dashboard-main/data/AirPassengers.csv', usecols = [0,1], names=['Time','Values'], skiprows=1)
 _data_airp['Time'] = pd.to_datetime(_data_airp['Time'], errors='raise')
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 ### PAGE LAYOUT ###############################################################################################################
 
@@ -22,12 +39,22 @@ layout = dbc.Container([
     # data input
     dbc.Row([
         dbc.Col([], width = 3),
-        dbc.Col([html.P(['Select a dataset:'], className='par')], width=2),
+        dbc.Col([html.P(['Input stock code:'], className='par')], width=2),
         dbc.Col([
-            dcc.RadioItems(['Air passenger'], value = 'Air passenger', persistence=True, persistence_type='session', id='radio-dataset')
-        ], width=4),
+            dcc.Input(id="dropdown_tickers", type="text"),
+            dbc.Button("Submit", outline=True, color = "Success")]
+        , width=4),
         dbc.Col([], width = 3)
-    ], className='row-content'),
+    ], className='input-place'),
+
+    
+    
+        
+        
+        
+
+    
+
 
     # raw data fig
     dbc.Row([
