@@ -4,6 +4,8 @@ import dash_bootstrap_components as dbc
 import pandas as pd
 import plotly.graph_objects as go
 import yfinance as yf
+from dash.exceptions import PreventUpdate
+from datetime import datetime as dt
 
 dash.register_page(__name__, name='1-Data set up', title='SARIMA | 1-Data set up')
 
@@ -13,7 +15,21 @@ _data_airp = pd.read_csv('/workspaces/CS329E/sarima_dashboard-main/data/AirPasse
 _data_airp['Time'] = pd.to_datetime(_data_airp['Time'], errors='raise')
 
 
+def stock_price(n, start_date, end_date, val): 
+    
+    if n == None: 
+        return [""]
+    if val == None:
+        raise PreventUpdate
+    else: 
+        if start_date != None:
+            df = yf.download(val, str(start_date), str(end_date))
+        else: 
+            df = yf.download(val)
+    df.reset_index(inplace=True)
+    fig = plot_data(df)
 
+    
 
 
 
@@ -39,15 +55,23 @@ layout = dbc.Container([
     # data input
     dbc.Row([
         dbc.Col([], width = 3),
-        dbc.Col([html.P(['Input stock code:'], className='par')], width=2),
+        dbc.Col([html.P(['Input stock code:'], className='input-place')], width=2),
         dbc.Col([
-            dcc.Input(id="dropdown_tickers", type="text"),
+            dbc.Input(id="dropdown_tickers", type="text", className="text-dark"),
             dbc.Button("Submit", outline=True, color = "Success")]
         , width=4),
         dbc.Col([], width = 3)
     ], className='input-place'),
 
-    
+    dbc.Row([
+        dbc.Col([], width = 3),
+        dcc.DatePickerRange(id='my-date-picker-range',
+                            min_date_allowed=dt(1995, 8, 5),
+                            max_date_allowed=dt.now(),
+                            initial_visible_month=dt.now(),
+                            end_date=dt.now().date()),
+    ],
+            className='date'),
     
         
         
@@ -69,21 +93,43 @@ layout = dbc.Container([
 
 ### PAGE CALLBACKS ###############################################################################################################
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 # Update fig
 @callback(
     Output(component_id='fig-pg1', component_property='figure'),
     Input(component_id='radio-dataset', component_property='value')
 )
-def plot_data(value):
-    fig = None
 
-    if value == 'Air passenger':
-        _data = _data_airp
+
+
+
+
+
+
+
+
+
+def plot_data(df):
+    
 
     fig = go.Figure(layout=my_figlayout)
-    fig.add_trace(go.Scatter(x=_data['Time'], y=_data['Values'], line=dict()))
+    fig.add_trace(go.Scatter(x=df['Date'], y=df['Close'], line=dict()))
 
-    fig.update_layout(title='Dataset Linechart', xaxis_title='Time', yaxis_title='Values', height = 500)
+    fig.update_layout(title='Dataset Linechart', xaxis_title='Time', yaxis_title='Close', height = 500)
     fig.update_traces(overwrite=True, line=my_linelayout)
 
     return fig
