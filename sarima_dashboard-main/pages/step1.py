@@ -7,7 +7,7 @@ import yfinance as yf
 from dash.exceptions import PreventUpdate
 from datetime import datetime as dt
 
-dash.register_page(__name__, name='1-Data set up', title='SARIMA | 1-Data set up')
+dash.register_page(__name__, name='1-Input Stock Code', title='Stock Prediction | 1-Input Stock Code')
 
 from assets.fig_layout import my_figlayout, my_linelayout
 

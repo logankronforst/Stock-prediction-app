@@ -13,9 +13,9 @@ _footer = html.Div([
 	        dbc.Col([
                 html.Ul([
                     html.Li([
-                        html.A([ html.I(className="fa-brands fa-github me-3 fa-1x")], href='https://github.com/gabri-al'),
-                        html.A([ html.I(className="fa-brands fa-linkedin me-3 fa-1x")], href='https://www.linkedin.com/in/gabriele-albini-85100549/'),
-                        html.A([ html.I(className="fa-brands fa-medium me-3 fa-1x")], href='https://medium.com/@gabri-albini')
+                        html.A([ html.I(className="fa-brands fa-github me-3 fa-1x")], href='https://github.com/logankronforst/CS329E.git'),
+                        html.A([ html.I(className="fa-brands fa-linkedin me-3 fa-1x")], href='www.linkedin.com/in/logan-kronforst-36319a185')
+                    
                     ])
                 ], className='list-unstyled d-flex justify-content-center justify-content-md-start')
             ], width = 2)

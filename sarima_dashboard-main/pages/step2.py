@@ -7,7 +7,7 @@ import numpy as np
 from pmdarima.utils import diff
 from statsmodels.tsa.stattools import adfuller
 
-dash.register_page(__name__, name='2-Stationarity', title='SARIMA | 2-Stationarity')
+dash.register_page(__name__, name='2-Machine Learning', title='Stock Prediction | 2-Machine Learning')
 
 from assets.fig_layout import my_figlayout, my_linelayout
 from assets.acf_pacf_plots import acf_pacf

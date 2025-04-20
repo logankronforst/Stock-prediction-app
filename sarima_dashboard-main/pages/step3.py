@@ -5,7 +5,7 @@ import pandas as pd
 import numpy as np
 from itertools import product
 
-dash.register_page(__name__, name='3-Model Selection', title='SARIMA | 3-Model Selection')
+dash.register_page(__name__, name='3-Gradient Descent', title='Stock Prediction | 3-Gradient Descent')
 
 from assets.sarima_gridsearch import sarima_grid_search
 

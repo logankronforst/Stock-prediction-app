@@ -9,7 +9,7 @@ import warnings
 warnings.filterwarnings("ignore")
 
 
-dash.register_page(__name__, name='4-Prediction', title='SARIMA | 4-Prediction')
+dash.register_page(__name__, name='4-Hyperparameter Tuner', title='Stock Prediction | 4-Hyperparameter Tuner')
 
 from assets.fig_layout import my_figlayout, train_linelayout, test_linelayout, pred_linelayout
 from assets.acf_pacf_plots import acf_pacf
