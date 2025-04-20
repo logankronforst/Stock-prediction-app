@@ -65,17 +65,16 @@ layout = dbc.Container([
     ], className='input-place'),
 
         dbc.Col([]),   
-            dcc.Slider(0, 1800, 
+            dcc.Slider(0, 24, 
                 step=None,
                 marks={
-                    1 : '1D',
-                    5 : '5D',
-                    30 : '1M',
-                    180 : '6M',
-                    360 : '1Y',
-                    1800 : '5Y'
+                    1 : '1M',
+                    3 : '3M',
+                    6 : '6M',
+                    12 : '1Y',
+                    24 : '2Y'
                 },            
-                value=6
+                value=5
             ),
         dbc.Col([]),
         
