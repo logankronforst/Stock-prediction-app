@@ -49,29 +49,22 @@ def stock_price(n, start_date, end_date, val):
 layout = dbc.Container([
     # title
     dbc.Row([
-        dbc.Col([html.H3(['Your dataset'])], width=12, className='row-titles')
+        dbc.Col([html.H3()], width=12, className='row-titles')
     ]),
 
     # data input
     dbc.Row([
-        dbc.Col([], width = 3),
+        dbc.Col([], width = 2),
         dbc.Col([html.P(['Input stock code:'], className='input-place')], width=2),
         dbc.Col([
             dbc.Input(id="dropdown_tickers", type="text", className="text-dark"),
             dbc.Button("Submit", outline=True, color = "Success")]
-        , width=4),
-        dbc.Col([], width = 3)
+        , width=1),
+        dbc.Col([], width = 2)
+        
     ], className='input-place'),
 
-    dbc.Row([
-        dbc.Col([], width = 3),
-        dcc.DatePickerRange(id='my-date-picker-range',
-                            min_date_allowed=dt(1995, 8, 5),
-                            max_date_allowed=dt.now(),
-                            initial_visible_month=dt.now(),
-                            end_date=dt.now().date()),
-    ],
-            className='date'),
+    
     
         
         
