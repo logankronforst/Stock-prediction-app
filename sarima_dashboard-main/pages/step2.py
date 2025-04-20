@@ -4,7 +4,7 @@ import dash_bootstrap_components as dbc
 import plotly.graph_objects as go
 import pandas as pd
 import numpy as np
-from pmdarima.utils import diff
+# from pmdarima.utils import diff
 from statsmodels.tsa.stattools import adfuller
 
 dash.register_page(__name__, name='2-Stationarity', title='SARIMA | 2-Stationarity')
