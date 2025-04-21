@@ -78,20 +78,32 @@ def stock_price(n_clicks, ticker):
     if not n_clicks or not ticker:
         raise PreventUpdate
     
-    df = yf.download(ticker, start='2020-01-01', end='2025-01-01')
+    df = yf.download(ticker, start='2020-01-01', end=dt.today().strftime("%Y-%m-%d"))
+    df['Date'] = df.index.tz_localize(None)
+    df['Close'] = df['Close'].round(2)
     
-    df.reset_index(inplace=True)
+    
+    
 
     return plot_data(df)
-
+    
 
 def plot_data(df):
     
 
     fig = go.Figure(layout=my_figlayout)
-    fig.add_trace(go.Scatter(x=df.index, y=df['Close']))
+    
+    fig.add_trace(go.Scatter(x=df['Date'], y=df['Close'],  line=dict()))
 
-    fig.update_layout(title='Dataset Linechart', xaxis_title='Time', yaxis_title='Close', height = 500)
-    # fig.update_traces(overwrite=True, line=my_linelayout)
+    fig.update_layout(title=f'Data Linechart', xaxis_title='Time', yaxis_title='Close', height = 500)
+    fig.update_xaxes(
+        tickformat="%Y-%m-%d" 
+    )
+    fig.update_yaxes(
+        tickformat=".2f"
+    )
+    
+    
+    fig.update_traces(line=my_linelayout)
 
     return fig

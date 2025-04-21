@@ -73,7 +73,7 @@ body {
     text-align: center;
 }
 
-input[type='radio'] {
+input[type='text'] {
     accent-color: #042f33;
     margin: 5px 5px 5px 5px;
 }
