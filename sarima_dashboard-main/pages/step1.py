@@ -4,6 +4,7 @@ import dash_bootstrap_components as dbc
 import pandas as pd
 import plotly.graph_objects as go
 import yfinance as yf
+import plotly.express as px
 
 from dash.exceptions import PreventUpdate
 from datetime import datetime as dt
@@ -66,44 +67,90 @@ layout = dbc.Container([
 
 
 # Update fig
+# @callback(
+#     Output(component_id='fig-pg1', component_property='figure'),
+#     Input("submit", "n_clicks"),
+#     State("dropdown_tickers", "value"),
+# )
+
+
+# def stock_price(n_clicks, ticker): 
+    
+#     if not n_clicks or not ticker:
+#         raise PreventUpdate
+    
+#     df = yf.download(ticker, start='2020-01-01', end=dt.today().strftime("%Y-%m-%d"))
+    
+#     df.index = df.index.tz_localize(None)
+    
+#     df['Close'] = df['Close'].round(2)
+    
+#     return plot_data(df)
+    
+
+# def plot_data(df):
+    
+#     fig = go.Figure(layout=my_figlayout)
+#     fig.add_trace(go.Scatter(x=df.index, y=df['Close'],  mode = "lines+markers",line=my_linelayout))
+#     fig.update_layout(title=f'Data Linechart', xaxis_title='Time', yaxis_title='Close', height = 500)
+#     fig.update_xaxes(
+#         tickformat="%Y-%m-%d" 
+#     )
+#     fig.update_yaxes(
+#         tickformat=".2f"
+#     )
+    
+    
+
+#     return fig
+
+  # at the top of your file
+
+import plotly.express as px
+
 @callback(
-    Output(component_id='fig-pg1', component_property='figure'),
+    Output("fig-pg1", "figure"),
     Input("submit", "n_clicks"),
     State("dropdown_tickers", "value"),
 )
-
-
-def stock_price(n_clicks, ticker): 
-    
+def stock_price(n_clicks, ticker):
     if not n_clicks or not ticker:
         raise PreventUpdate
-    
-    df = yf.download(ticker, start='2020-01-01', end=dt.today().strftime("%Y-%m-%d"))
-    df['Date'] = df.index.tz_localize(None)
-    df['Close'] = df['Close'].round(2)
-    
-    
-    
 
-    return plot_data(df)
-    
-
-def plot_data(df):
-    
-
-    fig = go.Figure(layout=my_figlayout)
-    
-    fig.add_trace(go.Scatter(x=df['Date'], y=df['Close'],  line=dict()))
-
-    fig.update_layout(title=f'Data Linechart', xaxis_title='Time', yaxis_title='Close', height = 500)
-    fig.update_xaxes(
-        tickformat="%Y-%m-%d" 
+    # 1) Download
+    df = yf.download(
+        ticker,
+        start="2020-01-01",
+        end=dt.today().strftime("%Y-%m-%d"),
     )
-    fig.update_yaxes(
-        tickformat=".2f"
+    df.index = df.index.tz_localize(None)
+    df["Close"] = df["Close"].round(2)
+
+    # 2) Flatten the columns
+    df.columns = df.columns.get_level_values(0)
+
+    # 3) Build PX line
+    fig = px.line(
+        df,
+        x=df.index,
+        y="Close",
+        markers=True,
+        title=f"{ticker.upper()} Close Price",
     )
-    
-    
+
+    # 4) Apply your custom figure layout
+    fig.update_layout(**my_figlayout.to_plotly_json())
+
+    # 5) Apply your custom trace style
     fig.update_traces(line=my_linelayout)
 
+    # 6) Tidy up axes
+    fig.update_xaxes(tickformat="%b %d, %Y", autorange=True)
+    fig.update_yaxes(tickformat=".2f", autorange=True)
+
     return fig
+
+
+
+
+

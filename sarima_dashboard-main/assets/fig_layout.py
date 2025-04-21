@@ -15,17 +15,17 @@ margin_style = {
 
 xaxis_style = {
     'linewidth' : 1,
-    'linecolor' : 'rgba(0, 0, 0, 0.35%)',
+    'linecolor' : 'rgba(0, 0, 0, 0.35)',
     'showgrid' : False,
     'zeroline' : False
 }
 
 yaxis_style = {
     'linewidth' : 1,
-    'linecolor' : 'rgba(0, 0, 0, 0.35%)',
+    'linecolor' : 'rgba(0, 0, 0, 0.35)',
     'showgrid' : True,
     'gridwidth' : 1,
-    'gridcolor' : 'rgba(0, 0, 0, 0.11%)',
+    'gridcolor' : 'rgba(0, 0, 0, 0.11)',
     'zeroline' : False
 }
 
