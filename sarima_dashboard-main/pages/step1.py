@@ -26,42 +26,51 @@ layout = dbc.Container([
 
     # data input
     dbc.Row([
-        dbc.Col([], width = 2),
+        dbc.Col([], width=2),
         dbc.Col([html.P(['Input stock code:'], className='input-place')], width=2),
         dbc.Col([
-            dbc.Input(id="dropdown_tickers", type="text", className="text-dark"),
-            dbc.Button("Submit",id='submit',outline=True, color = "Success")]
-        , width=1),
-        dbc.Col([], width = 2)
-        
+            dbc.Input(id="dropdown_tickers", type="text", value="TSLA", debounce=True, className="text-dark"),
+        ], width=1),
+        dbc.Col([], width=2)
     ], className='input-place'),
 
-        dbc.Col([]),   
-            dcc.Slider(0, 24, 
-                step=None,
-                marks={
-                    1 : '1M',
-                    3 : '3M',
-                    6 : '6M',
-                    12 : '1Y',
-                    24 : '2Y'
-                },            
-                value=5
-            ),
-        dbc.Col([]),
-        
-        
-    
+    # slider row
+    dbc.Row([
+        dbc.Col([], width=2),
+        dbc.Col([
+            html.Div(
+                dcc.Slider(
+                    0, 24,
+                    step=None,
+                    marks={
+                        1: '1M',
+                        3: '3M',
+                        6: '6M',
+                        12: '1Y',
+                        24: '2Y'
+                    },
+                    value=5,
+                    id='date-slider'
+                ),
+                style={
+                    "width": "100%",
+                    "margin": "10px auto"
+                }
+            )
+        ], width=6),
+        dbc.Col([], width=2)
+    ], justify="center"),
+
     # raw data fig
     dbc.Row([
-        dbc.Col([], width = 2),
+        dbc.Col([], width=2),
         dbc.Col([
             dcc.Loading(id='p1_1-loading', type='circle', children=dcc.Graph(id='fig-pg1', className='my-graph'))
-        ], width = 8),
-        dbc.Col([], width = 2)
+        ], width=8),
+        dbc.Col([], width=2)
     ], className='row-content')
-    
 ])
+
 
 ### PAGE CALLBACKS ###############################################################################################################
 
@@ -110,19 +119,29 @@ import plotly.express as px
 
 @callback(
     Output("fig-pg1", "figure"),
-    Input("submit", "n_clicks"),
-    State("dropdown_tickers", "value"),
+    Input("dropdown_tickers", "value"),
+    Input("date-slider", "value"),
 )
-def stock_price(n_clicks, ticker):
-    if not n_clicks or not ticker:
+def stock_price(ticker, months_back):
+    if not ticker or not months_back or len(ticker.strip()) < 2:
         raise PreventUpdate
+    
+    # Calculate start date based on months_back
+    end_date = dt.today()
+    start_date = end_date - pd.DateOffset(months=months_back)
 
     # 1) Download
     df = yf.download(
         ticker,
-        start="2020-01-01",
-        end=dt.today().strftime("%Y-%m-%d"),
+        start=start_date.strftime("%Y-%m-%d"),
+        end=end_date.strftime("%Y-%m-%d"),
     )
+    
+    if df.empty:
+        fig = go.Figure()
+        fig.update_layout(title="No data found.")
+        return fig
+    
     df.index = df.index.tz_localize(None)
     df["Close"] = df["Close"].round(2)
 
@@ -135,7 +154,7 @@ def stock_price(n_clicks, ticker):
         x=df.index,
         y="Close",
         markers=True,
-        title=f"{ticker.upper()} Close Price",
+        title=f"{ticker.upper()} Close Price - Last {months_back} Month(s)",
     )
 
     # 4) Apply your custom figure layout

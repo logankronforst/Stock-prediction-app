@@ -4,15 +4,16 @@ import dash_bootstrap_components as dbc
 import plotly.graph_objects as go
 import pandas as pd
 import numpy as np
-from pmdarima.utils import diff
 from statsmodels.tsa.stattools import adfuller
+import os
 
 dash.register_page(__name__, name='2-Machine Learning', title='Stock Prediction | 2-Machine Learning')
 
 from assets.fig_layout import my_figlayout, my_linelayout
 from assets.acf_pacf_plots import acf_pacf
 
-_data_airp = pd.read_csv('/workspaces/CS329E/sarima_dashboard-main/data/AirPassengers.csv', usecols = [0,1], names=['Time','Values'], skiprows=1)
+file_path = os.path.join("data", "AirPassengers.csv")
+_data_airp = pd.read_csv(file_path, usecols = [0,1], names=['Time','Values'], skiprows=1)
 _data_airp['Time'] = pd.to_datetime(_data_airp['Time'], errors='raise')
 
 ### PAGE LAYOUT ###############################################################################################################
