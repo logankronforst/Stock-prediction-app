@@ -1,44 +1,16 @@
 import dash
-from dash import html, dcc, callback, Input, Output
+from dash import html, dcc, callback, Input, Output, State
 import dash_bootstrap_components as dbc
 import pandas as pd
 import plotly.graph_objects as go
 import yfinance as yf
+
 from dash.exceptions import PreventUpdate
 from datetime import datetime as dt
 
 dash.register_page(__name__, name='1-Input Stock Code', title='Stock Prediction | 1-Input Stock Code')
 
 from assets.fig_layout import my_figlayout, my_linelayout
-
-
-
-
-def stock_price(n, start_date, end_date, val): 
-    
-    if n == None: 
-        return [""]
-    if val == None:
-        raise PreventUpdate
-    else: 
-        if start_date != None:
-            df = yf.download(val, str(start_date), str(end_date))
-        else: 
-            df = yf.download(val)
-    df.reset_index(inplace=True)
-    fig = plot_data(df)
-
-    
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -57,7 +29,7 @@ layout = dbc.Container([
         dbc.Col([html.P(['Input stock code:'], className='input-place')], width=2),
         dbc.Col([
             dbc.Input(id="dropdown_tickers", type="text", className="text-dark"),
-            dbc.Button("Submit", outline=True, color = "Success")]
+            dbc.Button("Submit",id='submit',outline=True, color = "Success")]
         , width=1),
         dbc.Col([], width = 2)
         
@@ -78,11 +50,7 @@ layout = dbc.Container([
         dbc.Col([]),
         
         
-        
-
     
-
-
     # raw data fig
     dbc.Row([
         dbc.Col([], width = 2),
@@ -97,42 +65,33 @@ layout = dbc.Container([
 ### PAGE CALLBACKS ###############################################################################################################
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 # Update fig
 @callback(
     Output(component_id='fig-pg1', component_property='figure'),
-    Input(component_id='radio-dataset', component_property='value')
+    Input("submit", "n_clicks"),
+    State("dropdown_tickers", "value"),
 )
 
 
+def stock_price(n_clicks, ticker): 
+    
+    if not n_clicks or not ticker:
+        raise PreventUpdate
+    
+    df = yf.download(ticker, start='2020-01-01', end='2025-01-01')
+    
+    df.reset_index(inplace=True)
 
-
-
-
-
-
+    return plot_data(df)
 
 
 def plot_data(df):
     
 
     fig = go.Figure(layout=my_figlayout)
-    fig.add_trace(go.Scatter(x=df['Date'], y=df['Close'], line=dict()))
+    fig.add_trace(go.Scatter(x=df.index, y=df['Close']))
 
     fig.update_layout(title='Dataset Linechart', xaxis_title='Time', yaxis_title='Close', height = 500)
-    fig.update_traces(overwrite=True, line=my_linelayout)
+    # fig.update_traces(overwrite=True, line=my_linelayout)
 
     return fig
