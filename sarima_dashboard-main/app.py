@@ -1,41 +1,48 @@
-from dash import Dash, dcc
-import dash_bootstrap_components as dbc
 import dash
-import pandas as pd
-import plotly.express as px
+from dash import Dash, dcc, html
+import dash_bootstrap_components as dbc
 
+# register pages automatically from pages/*.py
+# make sure that your pages folder is laid out like:
+#   pages/
+#     __init__.py
+#     step1.py
+#     step2.py
+#     step3.py
+#     step4.py
 app = Dash(
     __name__,
     use_pages=True,
     external_stylesheets=[dbc.themes.BOOTSTRAP, dbc.icons.FONT_AWESOME],
-    suppress_callback_exceptions=True,
-    prevent_initial_callbacks=True
+    suppress_callback_exceptions=True,  # we have callbacks in pages
 )
 server = app.server
 
-############################################################################################
-# Import shared components
-from assets.footer import _footer
+# your shared nav and footer components
 from assets.nav import _nav
-############################################################################################
+from assets.footer import _footer
 
-# ──────────────────────────────────────────────────────────────────────────────
-# App Layout
-# ──────────────────────────────────────────────────────────────────────────────
-app.layout = dbc.Container([
+app.layout = dbc.Container(fluid=True, children=[
+    # capture the URL so callbacks in pages can read it
+    dcc.Location(id="url", refresh=False),
+
     dbc.Row([
-        dbc.Col(_nav, width=2),
-        dbc.Col(dash.page_container, width=10),
-    ]),
+        # sidebar
+        dbc.Col(_nav, width=2, style={"padding": 0}),
+        # page content
+        dbc.Col(dash.page_container, width=10)
+    ], className="h-100"),
+
     dbc.Row([
         dbc.Col([], width=2),
-        dbc.Col(_footer, width=10),
+        dbc.Col(_footer, width=10)
     ]),
-    dcc.Store(id='browser-memo', data={}, storage_type='session')
-], fluid=True)
 
-############################################################################################
-# Run App
-if __name__ == '__main__':
+    # session‑wide store for the ticker & anything else
+    dcc.Store(id="browser-memo", data={}, storage_type="session")
+
+], style={"height": "100vh", "padding": 0})
+
+
+if __name__ == "__main__":
     app.run(debug=True)
-
