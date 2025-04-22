@@ -98,15 +98,13 @@ layout = dbc.Container(fluid=True, children=[
     ], className="row-content"),
 
     # this Store is written in step1, read here to pull the ticker
-    dcc.Store(id="browser-memo", storage_type="session")
+    dcc.Store(id="fig-step1-store", storage_type="session")
 ])
 
 
 @callback(
-    Output("fig-arch", "figure"),
     Output("fig-forecast", "figure"),
-    # fire on both page‐load (store) and whenever Train is clicked
-    Input("browser-memo", "data"),
+    Input("fig-step1-store", "data"),    # <-- fixed here
     Input("train-btn", "n_clicks"),
     State("num-layers", "value"),
     State("units-1", "value"),
@@ -183,40 +181,45 @@ def update_rnn(store, n_clicks, nl, u1, u2, u3, lr, epochs):
     fig_f.data[0].line = my_linelayout
     fig_f.data[1].line.width = my_linelayout["width"]
     fig_f.data[1].line.dash  = "dash"
-    fig_f.update_xaxes(tickformat="%b %d, %Y")
+    fig_f.update_xaxes(tickformat="%b %d, %Y")
     fig_f.update_yaxes(tickformat=".2f")
 
-    # ── 6) build a **symmetrical** architecture sketch
-    # layers = [ input‐len, hidden…, output ]
-    layers = [lookback] + units + [1]
-    maxn   = max(layers)
-    xs     = np.linspace(0, 1, len(layers))
+    return fig_f
 
+
+@callback(
+    Output("fig-arch", "figure"),
+    Input("num-layers", "value"),
+    Input("units-1", "value"),
+    Input("units-2", "value"),
+    Input("units-3", "value"),
+)
+def update_architecture(nl, u1, u2, u3):
+    lookback = 20
+    units = [u1, u2, u3][:nl]
+    layers = [lookback] + units + [1]
+    xs = np.linspace(0, 1, len(layers))
     Xs, Ys, links = [], [], []
-    for i,n in enumerate(layers):
-        # centre n nodes vertically:
-        # place them at linspace(0,1,n+2)[1:-1] → always symmetrical
-        y_coords = np.linspace(0,1,n+2)[1:-1]
+
+    for i, n in enumerate(layers):
+        y_coords = np.linspace(0, 1, n + 2)[1:-1]
         for y in y_coords:
             Xs.append(xs[i])
             Ys.append(y)
-        # now link each node → next layer
-        if i < len(layers)-1:
-            next_y = np.linspace(0,1,layers[i+1]+2)[1:-1]
+        if i < len(layers) - 1:
+            next_y = np.linspace(0, 1, layers[i+1] + 2)[1:-1]
             for y0 in y_coords:
                 for y1 in next_y:
-                    links.append(((xs[i],y0),(xs[i+1],y1)))
+                    links.append(((xs[i], y0), (xs[i+1], y1)))
 
     fig_a = go.Figure(layout=my_figlayout)
-    # draw all the little grey-greenish lines between layers
-    for (x0,y0),(x1,y1) in links:
+    for (x0, y0), (x1, y1) in links:
         fig_a.add_trace(go.Scatter(
-            x=[x0,x1], y=[y0,y1],
+            x=[x0, x1], y=[y0, y1],
             mode="lines",
             line=dict(color="rgba(62,180,137,0.3)"),
             showlegend=False
         ))
-    # draw nodes on top
     fig_a.add_trace(go.Scatter(
         x=Xs, y=Ys,
         mode="markers",
@@ -233,8 +236,6 @@ def update_rnn(store, n_clicks, nl, u1, u2, u3, lr, epochs):
         height=400,
         margin=dict(l=10, r=10, t=10, b=10)
     )
-
-    return fig_a, fig_f
-
+    return fig_a
 
 
