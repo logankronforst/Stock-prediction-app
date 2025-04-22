@@ -16,9 +16,11 @@ dash.register_page(
     title="Stock Prediction | GD Visualization"
 )
 
+
 def cost_fn(x, y):
     # simple convex paraboloid surface
     return x**2 + 0.5 * y**2
+
 
 def compute_adam_path(initial=(3.0, 3.0), lr=0.1, steps=50, tol=1e-3):
     x = tf.Variable(initial, dtype=tf.float32)
@@ -35,17 +37,26 @@ def compute_adam_path(initial=(3.0, 3.0), lr=0.1, steps=50, tol=1e-3):
             break
     return np.array(hist)
 
+
 layout = dbc.Container(fluid=True, children=[
     dbc.Row(dbc.Col(html.H3("3 – Gradient Descent via Adam"), className="row-titles")),
     dbc.Row(dbc.Col(
         dcc.Loading(
-            dcc.Graph(id="fig-gd3"),
+            dcc.Graph(
+                id="fig-gd3",
+                style={
+                    "width": "95vw",
+                    "height": "700px",
+                    "margin": "0 auto"
+                }
+            ),
             type="default",
             color="rgb(61,237,151)"
         ),
         width=12
     ), className="row-content")
 ])
+
 
 @callback(
     Output("fig-gd3", "figure"),
@@ -56,7 +67,7 @@ def draw_gradient_descent(store):
     steps = int(store.get("gd_steps", 50))
 
     traj = compute_adam_path(initial=(3.0, 3.0), lr=lr, steps=steps, tol=1e-3)
-    xs, ys, zs = traj[:,0], traj[:,1], traj[:,2]
+    xs, ys, zs = traj[:, 0], traj[:, 1], traj[:, 2]
 
     # surface grid
     grid = np.linspace(-4, 4, 200)
@@ -100,7 +111,7 @@ def draw_gradient_descent(store):
     # initial loss annotation
     initial_ann = dict(
         xref="paper", yref="paper",
-        x=0.15, y=0.95,
+        x=0.15, y=0.88,
         text=f"<b>Loss:</b> {zs[0]:.4f}",
         showarrow=False,
         font=dict(color="rgb(61,237,151)", size=16),
@@ -133,7 +144,7 @@ def draw_gradient_descent(store):
         updatemenus=[dict(
             type="buttons",
             showactive=False,
-            y=1.05, x=0.5,
+            y=1.1, x=0.5,
             xanchor="center", yanchor="top",
             buttons=[dict(
                 label=" Play",
@@ -143,13 +154,13 @@ def draw_gradient_descent(store):
         )],
         legend=dict(
             title="",
-            x=0.5, y=1.0,
-            xanchor="center", yanchor="bottom",
+            x=0.5, y=0.92,
+            xanchor="center", yanchor="top",
             orientation="h",
             bgcolor="rgba(0,0,0,0)"
         ),
-        margin=dict(l=80, r=80, t=100, b=80),
-        width=900,
+        margin=dict(l=80, r=80, t=120, b=80),
+        width=1200,
         height=700
     )
 
