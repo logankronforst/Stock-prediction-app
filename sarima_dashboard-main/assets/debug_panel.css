@@ -1,22 +1,21 @@
-/* ===== Make Dash debug overlay readable ===== */
-
-/* The container and its sub‑panels */
-.dash-debug-container,
-.dash-debug-control-panel,
-.dash-debug-error,
-.dash-debug-info {
-  background: rgba(255,255,255,0.97) !important;   /* opaque white */
-  color: #000 !important;                          /* black text   */
-  opacity: 1 !important;
-  border-radius: 6px;
-  box-shadow: 0 0 6px #0003;
-  padding: 8px;
-  max-width: 420px;
-  font-size: 14px;
-}
-
-/* Force ALL descendant text to black */
-.dash-debug-container * {
-  color: #000 !important;
-}
-
+/* ——————————————————————————————
+   Debug‑Panel Override
+   (forces a white bg + black text)
+   —————————————————————————————— */
+   :root .dash-debug-container,
+   :root .dash-debug-control-panel,
+   :root .dash-debug-error,
+   :root .dash-debug-info {
+     background-color: #fff !important;
+     color: #000 !important;
+     opacity: 1 !important;
+     z-index: 9999 !important;
+   }
+   
+   :root .dash-debug-container *,
+   :root .dash-debug-control-panel *,
+   :root .dash-debug-error *,
+   :root .dash-debug-info * {
+     color: #000 !important;
+   }
+   

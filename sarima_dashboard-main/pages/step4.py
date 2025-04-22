@@ -1,189 +1,240 @@
+# pages/step4.py
+
 import dash
-from dash import html, dcc, callback, Input, Output
-import plotly.graph_objects as go
+from dash import html, dcc, callback, Input, Output, State
 import dash_bootstrap_components as dbc
+import yfinance as yf
 import pandas as pd
 import numpy as np
-from statsmodels.tsa.statespace.sarimax import SARIMAX
-import warnings
-warnings.filterwarnings("ignore")
+import plotly.graph_objects as go
+import plotly.express as px
+import tensorflow as tf
+from sklearn.preprocessing import MinMaxScaler
+from datetime import datetime as dt
 
+from assets.fig_layout import my_figlayout, my_linelayout
 
-dash.register_page(__name__, name='4-Hyperparameter Tuner', title='Stock Prediction | 4-Hyperparameter Tuner')
+dash.register_page(
+    __name__,
+    path="/4-hyperparam-tuner",
+    name="4 – Hyperparameter Tuner",
+    title="Stock Prediction | Hyperparameter Tuner"
+)
 
-from assets.fig_layout import my_figlayout, train_linelayout, test_linelayout, pred_linelayout
-from assets.acf_pacf_plots import acf_pacf
+layout = dbc.Container(fluid=True, children=[
 
-_data_airp = pd.read_csv('/workspaces/CS329E/sarima_dashboard-main/data/AirPassengers.csv', usecols = [0,1], names=['Time','Values'], skiprows=1)
-_data_airp['Time'] = pd.to_datetime(_data_airp['Time'], errors='raise')
-_trainp = 80
-idx_split = round(len(_data_airp['Values']) * (_trainp/100)) # Split train-test
-_datatrain = _data_airp.iloc[:idx_split+1]
-_opts = range(0,int(len(_datatrain['Values'])/2),1)
-_opts = list(_opts)
+    # Title
+    dbc.Row(dbc.Col(html.H3("4 – Hyperparameter Tuner"),
+                    className="row-titles")),
 
-### PAGE LAYOUT ###############################################################################################################
-
-layout = dbc.Container([
-    # title
+    # Controls + Train button
     dbc.Row([
-        dbc.Col([html.H3(['Final Model: Fit & Prediction'])], width=12, className='row-titles')
-    ]),
-    # final-model
-    dbc.Row([
-        dbc.Col(width=3),
-        dbc.Col([html.P(['Final SARIMA(p,d,q; P,D,Q,m) model parameters: '], className='par')], width=6),
-        dbc.Col(width=3)
-    ]),
-    dbc.Row([
-        dbc.Col(width=3),
-        dbc.Col([dcc.Dropdown(options=_opts, placeholder='p', value=0, clearable=False, searchable=True, persistence=True, persistence_type='memory', id='p-fin')], width=1),
-        dbc.Col([dcc.Dropdown(options=_opts, placeholder='d', value=1, clearable=False, searchable=True, persistence=True, persistence_type='memory', id='d-fin')], width=1),
-        dbc.Col([dcc.Dropdown(options=_opts, placeholder='q', value=1, clearable=False, searchable=True, persistence=True, persistence_type='memory', id='q-fin')], width=1),
-        dbc.Col([dcc.Dropdown(options=_opts, placeholder='P', value=0, clearable=False, searchable=True, persistence=True, persistence_type='memory', id='sp-fin')], width=1),
-        dbc.Col([dcc.Dropdown(options=_opts, placeholder='D', value=1, clearable=False, searchable=True, persistence=True, persistence_type='memory', id='sd-fin')], width=1),
-        dbc.Col([dcc.Dropdown(options=_opts, placeholder='Q', value=1, clearable=False, searchable=True, persistence=True, persistence_type='memory', id='sq-fin')], width=1),
-        dbc.Col([dcc.Dropdown(options=_opts, placeholder='m', value=12, clearable=False, searchable=True, persistence=True, persistence_type='memory', id='sm-fin')], width=1),        
-        dbc.Col(width=2)
-    ]),
-    dbc.Row([], style={'margin':'20px 0px 0px 0px'}),
-    dbc.Row([
-        dbc.Col(width=2),
-        dbc.Col([html.P(['Generate out of sample forecasts for: '], className='par')], width=4),
-        dbc.Col([dcc.Dropdown(options=list(range(0,366,1)), placeholder='n', clearable=False, searchable=True, persistence=True, persistence_type='memory', id='n-offset')], width=1),
-        dbc.Col([dcc.Dropdown(options=['datapoints','years','months','days','hours'], placeholder='datapoints', clearable=False, searchable=True, persistence=True, persistence_type='memory', id='n-timetype')], width=2),
-        dbc.Col(width=3),
-    ]),
-    dbc.Row([
-        dbc.Col([], width = 1),
+
+        # ── Left column: sliders & button
         dbc.Col([
-            dcc.Loading(id='m1-loading', type='circle', children=dcc.Graph(id='fig-pg41', className='my-graph'))
-        ], width = 10),
-        dbc.Col([], width = 1)
-    ], className='row-content'),
-    dbc.Row([
-        dbc.Col([], width = 1),
+            html.Label("Number of LSTM Layers:", style={"color": "#3DED97"}),
+            dcc.Slider(1, 3,
+                       step=1,
+                       marks={1:"1", 2:"2", 3:"3"},
+                       value=1,
+                       id="num-layers"),
+            html.Br(),
+
+            html.Label("Units in Layer 1:", style={"color": "#3DED97"}),
+            dcc.Slider(5, 128,
+                       step=None,
+                       marks={5:"5", 32:"32", 64:"64", 128:"128"},
+                       value=32,
+                       id="units-1"),
+            html.Br(),
+
+            html.Label("Units in Layer 2:", style={"color": "#3DED97"}),
+            dcc.Slider(5, 128,
+                       step=None,
+                       marks={5:"5", 32:"32", 64:"64", 128:"128"},
+                       value=32,
+                       id="units-2"),
+            html.Br(),
+
+            html.Label("Units in Layer 3:", style={"color": "#3DED97"}),
+            dcc.Slider(5, 128,
+                       step=None,
+                       marks={5:"5", 32:"32", 64:"64", 128:"128"},
+                       value=32,
+                       id="units-3"),
+            html.Hr(style={"borderColor":"rgba(255,255,255,0.2)"}),
+
+            html.Label("Learning Rate:", style={"color": "#3DED97"}),
+            dcc.Slider(1e-4, 1e-1,
+                       step=None,
+                       marks={1e-4:"1e-4", 1e-2:"1e-2", 1e-1:"1e-1"},
+                       value=1e-2,
+                       id="learning-rate"),
+            html.Br(),
+
+            html.Label("Epochs:", style={"color": "#3DED97"}),
+            dcc.Slider(1, 20,
+                       step=1,
+                       marks={1:"1", 5:"5", 10:"10", 20:"20"},
+                       value=5,
+                       id="epochs"),
+            html.Br(),
+
+            dbc.Button("Train", id="train-btn",
+                       color="success", className="mt-2"),
+        ], width=4, className="div-hyperpar"),
+
+
+        # ── Right column: architecture & forecast plots
         dbc.Col([
-            dcc.Loading(id='m2-loading', type='circle', children=dcc.Graph(id='fig-pg42', className='my-graph'))
-        ], width = 5),
-        dbc.Col([
-            dcc.Loading(id='m3-loading', type='circle', children=dcc.Graph(id='fig-pg43', className='my-graph'))
-        ], width = 5),
-        dbc.Col([], width = 1)
-    ])
+            dbc.Row(dcc.Loading(
+                dcc.Graph(id="fig-arch", config={"displayModeBar": False})
+            ), className="mb-4"),
+            dbc.Row(dcc.Loading(
+                dcc.Graph(id="fig-forecast", config={"displayModeBar": False})
+            )),
+        ], width=8),
+
+    ], className="row-content"),
+
+    # this Store is written in step1, read here to pull the ticker
+    dcc.Store(id="browser-memo", storage_type="session")
 ])
 
-### PAGE CALLBACKS ###############################################################################################################
 
-# Set options & placeholder
 @callback(
-    Output(component_id='n-timetype', component_property='options'),
-    Output(component_id='n-timetype', component_property='placeholder'),
-    Input(component_id='n-offset', component_property='value')
+    Output("fig-arch", "figure"),
+    Output("fig-forecast", "figure"),
+    # fire on both page‐load (store) and whenever Train is clicked
+    Input("browser-memo", "data"),
+    Input("train-btn", "n_clicks"),
+    State("num-layers", "value"),
+    State("units-1", "value"),
+    State("units-2", "value"),
+    State("units-3", "value"),
+    State("learning-rate", "value"),
+    State("epochs", "value"),
 )
-def init_(_v):
-    _data = _data_airp.copy()
-    if str(_data.dtypes[0]) in (['<M8[ns]','>M8[ns]','datetime64[ns]']):
-        return ['years','months','days','hours'], 'months'
-    else:
-        return ['datapoints'], 'datapoints'
+def update_rnn(store, n_clicks, nl, u1, u2, u3, lr, epochs):
+    # ── 1) determine ticker (TSLA if none in store)
+    ticker = (store or {}).get("ticker", "TSLA")
 
-# Generate predictions & Graph
-@callback(
-    Output(component_id='fig-pg41', component_property='figure'),
-    Output(component_id='fig-pg42', component_property='figure'),
-    Output(component_id='fig-pg43', component_property='figure'),
-    Input(component_id='p-fin', component_property='value'),
-    Input(component_id='d-fin', component_property='value'),
-    Input(component_id='q-fin', component_property='value'),
-    Input(component_id='sp-fin', component_property='value'),
-    Input(component_id='sd-fin', component_property='value'),
-    Input(component_id='sq-fin', component_property='value'),
-    Input(component_id='sm-fin', component_property='value'),
-    Input(component_id='n-offset', component_property='value'),
-    Input(component_id='n-timetype', component_property='value')
-)
-def predict_(_p, _d, _q, _P, _D, _Q, _m, _noffs, _ntype):
-    if _noffs is None:
-        _noffs = int(0)
-    else:
-        _noffs = int(_noffs)
-    _p = int(_p); _d = int(_d); _q = int(_q); _P = int(_P); _D = int(_D); _Q = int(_Q); _m = int(_m)
-    if not _ntype:
-        _ntype = 'datapoints'        
-    # Get data
-    _data = _data_airp.copy()
-    _data['Values'] = list(np.log(_data['Values']))
-    idx_split = round(len(_data['Values']) * (_trainp/100)) # Split train-test # Split train-test
-    _data_train = _data.iloc[:idx_split+1]
-    _data_train['_is_train'] = 1
-    _data_test = _data.iloc[idx_split+1:]
-    _data_test['_is_train'] = 0
-    tt = []
-    if _ntype != 'datapoints':
-        max_t = pd.to_datetime(max(list(_data_test['Time'])))
-        if _ntype == 'years':
-            for i in range(1, _noffs+1, 1):
-                tt.append( max_t + pd.DateOffset( years = i))
-        elif _ntype == 'months':
-            for i in range(1, _noffs+1, 1):
-                tt.append( max_t + pd.DateOffset( months = i))                    
-        elif _ntype == 'days':
-            for i in range(1, _noffs+1, 1):
-                tt.append( max_t + pd.DateOffset( days = i))                    
-        elif _ntype == 'hours':
-            for i in range(1, _noffs+1, 1):
-                tt.append( max_t + pd.DateOffset( hours = i))                    
-    elif _ntype == 'datapoints':
-        max_t = max(_data_test['Time'])
-        [tt.append(max_t+i) for i in range(1,_noffs+1,1)]
-    _data_pred = pd.DataFrame() # out of sample predictions        
-    _data_pred['Time'] = tt
-    _data_pred['Values'] = np.nan
-    _data_pred['_is_train'] = 2
-    _data_all = pd.concat([_data_train, _data_test, _data_pred], ignore_index=True)
+    # ── 2) pull & prep exactly like step2
+    df = yf.download(
+        ticker,
+        start="2020-01-01",
+        end=dt.today().strftime("%Y-%m-%d"),
+        progress=False
+    )
+    df.index = df.index.tz_localize(None)
+    closes = df["Close"].round(2).values.reshape(-1,1)
 
-    # Fit model
-    _best_model = SARIMAX(endog = _data_train['Values'], order=(_p, _d, _q), seasonal_order=(_P, _D, _Q, _m)).fit(disp=-1)
-    # Calculate predictions
-    _model_pred = _best_model.get_prediction(start=0, end=len(list(_data_all['Time'])))
-    _data_all['Values Predicted'] = _model_pred.predicted_mean
-    _data_all['Pred CI lower'] = _model_pred.conf_int(alpha=0.05).iloc[:,0]
-    _data_all['Pred CI upper'] = _model_pred.conf_int(alpha=0.05).iloc[:,1]
-    _data_all['Values'] = np.exp(_data_all['Values'])
-    _data_all['Values Predicted'] = np.exp(_data_all['Values Predicted'])
-    _data_all['Pred CI lower'] = np.exp(_data_all['Pred CI lower'])
-    _data_all['Pred CI upper'] = np.exp(_data_all['Pred CI upper'])
-    _data_all.loc[_data_all['Values Predicted'] <= min(list(_data_all['Values']))/2, 'Values Predicted'] = np.nan # Correcting outliers
-    _data_all.loc[_data_all['Values Predicted'] >= max(list(_data_all['Values']))*2, 'Values Predicted'] = np.nan
-    _data_all.loc[_data_all['Pred CI lower'] <= min(list(_data_all['Values']))/2, 'Pred CI lower'] = np.nan
-    _data_all.loc[_data_all['Pred CI upper'] >= max(list(_data_all['Values']))*2, 'Pred CI upper'] = np.nan
-    
-    # Show model results
-    fig1 = go.Figure(layout=my_figlayout)
-    # CIs
-    fig1.add_trace(go.Scatter(x=_data_all['Time'], y=_data_all['Pred CI lower'], mode='lines',
-                    line = dict(width=0.5, color = 'rgba(255,255,255,0)'), name='95%-CI', showlegend=False))
-    fig1.add_trace(go.Scatter(x=_data_all['Time'], y=_data_all['Pred CI upper'], mode='lines', fill='tonexty',
-                            line = dict(width=0.5, color = 'rgba(255,255,255,0)'),
-                            fillcolor = 'rgba(178, 211, 194,0.11)', name='95%-CI'))
-    # Lines
-    fig1.add_trace(go.Scatter(x=_data_all.loc[_data_all['_is_train']==1, 'Time'],
-                                y=_data_all.loc[_data_all['_is_train']==1, 'Values'], mode='lines', name='Train', line=train_linelayout))
-    fig1.add_trace(go.Scatter(x=_data_all.loc[_data_all['_is_train']==0, 'Time'],
-                                y=_data_all.loc[_data_all['_is_train']==0, 'Values'], mode='lines', name='Test', line=test_linelayout))
-    fig1.add_trace(go.Scatter(x=_data_all['Time'], y=_data_all['Values Predicted'], mode='lines', name='Predictions', line=pred_linelayout))
-    fig1.update_xaxes(title_text = 'Time')
-    fig1.update_yaxes(title_text = 'Values')
-    fig1.update_layout(title="Final Model Results", height=500)
-    #_min_yrange = round( min(list(_data_train['Values'])) - 1.25 * min(list(_data_train['Values'])) )
-    #_max_yrange = round( max(list(_data_train['Values'])) + 1.25 * max(list(_data_train['Values'])) )
-    #fig1.update_yaxes(range = [_min_yrange, _max_yrange])
+    scaler = MinMaxScaler().fit(closes)
+    scaled = scaler.transform(closes)
+    lookback = 20
+    X, y_true = [], []
+    for i in range(lookback, len(scaled)):
+        X.append(scaled[i-lookback:i,0])
+        y_true.append(scaled[i,0])
+    X = np.array(X)[:,:,None]
+    y_true = np.array(y_true)
 
-    # Show residuals ACF and PACF
-    resid_df = pd.DataFrame(_best_model.resid, columns = ['Residuals'])
-    fig_2, fig_3 = acf_pacf(resid_df, 'Residuals')
-    fig_2.update_layout(title="Model Residuals: Autocorrelation (ACF)")
-    fig_3.update_layout(title="Model Residuals: Partial Autocorrelation (PACF)")
+    # ── 3) build the variable‐size LSTM
+    units = [u1, u2, u3][:nl]
+    model = tf.keras.Sequential()
+    for i,u in enumerate(units):
+        model.add(tf.keras.layers.LSTM(
+            u,
+            return_sequences=(i<nl-1),
+            input_shape=(lookback,1) if i==0 else None
+        ))
+    model.add(tf.keras.layers.Dense(1))
+    model.compile(
+        optimizer=tf.keras.optimizers.Adam(learning_rate=lr),
+        loss="mse"
+    )
+    model.fit(X, y_true,
+              epochs=epochs,
+              batch_size=16,
+              verbose=0)
 
-    return fig1, fig_2, fig_3
+    # ── 4) forecast
+    y_pred = scaler.inverse_transform(
+        model.predict(X).reshape(-1,1)
+    ).flatten()
+    dates = df.index[lookback:]
+
+    # ── 5) build your forecast figure
+    plot_df = pd.DataFrame({
+        "Date":   np.concatenate([df.index.values, dates]),
+        "Value":  np.concatenate([closes.flatten(), y_pred]),
+        "Series": ["Actual"]*len(closes) + ["Predicted"]*len(y_pred)
+    })
+    fig_f = px.line(
+        plot_df,
+        x="Date", y="Value", color="Series",
+        markers=True,
+        color_discrete_map={
+            "Actual":    my_linelayout["color"],
+            "Predicted": "#ff7b00"
+        }
+    )
+    fig_f.layout = my_figlayout
+    fig_f.data[0].line = my_linelayout
+    fig_f.data[1].line.width = my_linelayout["width"]
+    fig_f.data[1].line.dash  = "dash"
+    fig_f.update_xaxes(tickformat="%b %d, %Y")
+    fig_f.update_yaxes(tickformat=".2f")
+
+    # ── 6) build a **symmetrical** architecture sketch
+    # layers = [ input‐len, hidden…, output ]
+    layers = [lookback] + units + [1]
+    maxn   = max(layers)
+    xs     = np.linspace(0, 1, len(layers))
+
+    Xs, Ys, links = [], [], []
+    for i,n in enumerate(layers):
+        # centre n nodes vertically:
+        # place them at linspace(0,1,n+2)[1:-1] → always symmetrical
+        y_coords = np.linspace(0,1,n+2)[1:-1]
+        for y in y_coords:
+            Xs.append(xs[i])
+            Ys.append(y)
+        # now link each node → next layer
+        if i < len(layers)-1:
+            next_y = np.linspace(0,1,layers[i+1]+2)[1:-1]
+            for y0 in y_coords:
+                for y1 in next_y:
+                    links.append(((xs[i],y0),(xs[i+1],y1)))
+
+    fig_a = go.Figure(layout=my_figlayout)
+    # draw all the little grey-greenish lines between layers
+    for (x0,y0),(x1,y1) in links:
+        fig_a.add_trace(go.Scatter(
+            x=[x0,x1], y=[y0,y1],
+            mode="lines",
+            line=dict(color="rgba(62,180,137,0.3)"),
+            showlegend=False
+        ))
+    # draw nodes on top
+    fig_a.add_trace(go.Scatter(
+        x=Xs, y=Ys,
+        mode="markers",
+        marker=dict(
+            size=20,
+            color=my_linelayout["color"],
+            line=dict(color="white", width=1)
+        ),
+        showlegend=False
+    ))
+    fig_a.update_xaxes(visible=False)
+    fig_a.update_yaxes(visible=False)
+    fig_a.update_layout(
+        height=400,
+        margin=dict(l=10, r=10, t=10, b=10)
+    )
+
+    return fig_a, fig_f
+
+
+

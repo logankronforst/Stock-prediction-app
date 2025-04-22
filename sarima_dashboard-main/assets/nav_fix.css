@@ -1,0 +1,18 @@
+/* ===== sidebar page links colour override ===== */
+
+/* normal (un‑selected) links */
+a.nav-link,
+a.nav-link:visited {
+  color: #f6f6f6 !important;      /* light text */
+}
+
+/* on hover */
+a.nav-link:hover {
+  color: #3DED97 !important;      /* optional hover tint */
+}
+
+/* the active (selected) pill – keep white text on the dark bg */
+.nav-pills .nav-link.active {
+  color: #f6f6f6 !important;
+  background-color: #042f33;      /* you already set this */
+}
