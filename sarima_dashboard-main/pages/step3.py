@@ -51,9 +51,10 @@ layout = dbc.Container(fluid=True, children=[
             dcc.Graph(
                 id="fig-gd3",
                 style={
-                    "width": "98vw",
-                    "height": "700px",
-                    "margin": "0 auto"
+                    "width": "100vw",      # full width
+                    "height": "100vh",     # taller
+                    "margin": "0 auto",
+                    "display": "block"
                 }
             ),
             type="default",
@@ -73,10 +74,13 @@ def draw_gradient_descent(store):
     steps = int(store.get("gd_steps", 50))
 
     # get RNN training loss history using same lr and step count
-    model_losses = train_rnn_model(lr=lr, steps=steps)
+    # model_losses = train_rnn_model(lr=lr, steps=steps)
 
     traj = compute_adam_path(initial=(3.0, 3.0), lr=lr, steps=steps, tol=1e-3)
     xs, ys, zs = traj[:, 0], traj[:, 1], traj[:, 2]
+
+    # Use parabola loss history if model_losses is stubbed
+    model_losses = zs  # override with actual cost_fn losses so annotations update
 
     # per-feature loss contributions
     loss_xs = xs**2
@@ -99,7 +103,7 @@ def draw_gradient_descent(store):
             xaxis=dict(backgroundcolor='rgba(0,0,0,0)', gridcolor='rgba(61,237,151,0.2)'),
             yaxis=dict(backgroundcolor='rgba(0,0,0,0)', gridcolor='rgba(61,237,151,0.2)'),
             zaxis=dict(backgroundcolor='rgba(0,0,0,0)', gridcolor='rgba(61,237,151,0.2)'),
-            camera=dict(eye=dict(x=1.5, y=1.5, z=1.5))
+            camera=dict(eye=dict(x=0, y=0, z=4))  # high overhead
         )
     )
 
@@ -130,8 +134,8 @@ def draw_gradient_descent(store):
         ),
         showarrow=False,
         font=dict(color="rgb(61,237,151)", size=16),
-        bgcolor="rgba(0,0,0,0.6)",
-        bordercolor="rgb(61,237,151)", borderwidth=2, borderpad=6
+        bgcolor="rgba(0,0,0,1)",
+        bordercolor="rgb(61,237,151)", borderwidth=2, borderpad=10,
     )
     fig.update_layout(annotations=[initial_ann])
 
@@ -176,9 +180,10 @@ def draw_gradient_descent(store):
             orientation="h",
             bgcolor="rgba(0,0,0,0)"
         ),
-        margin=dict(l=80, r=80, t=120, b=80),
-        # width removed to auto-scale
-        height=700
+        margin=dict(l=0, r=0, t=0, b=0),
+        autosize=True,  # allow full area usage
+        
+        height=1000
     )
 
     return fig
