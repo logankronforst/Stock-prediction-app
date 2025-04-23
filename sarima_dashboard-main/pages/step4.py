@@ -211,6 +211,14 @@ def update_rnn(store, n_clicks, future_days, nl, u1, u2, u3, lr, epochs):
         "Loss": [None] * half,
         "MAE": [None] * half
     })
+    # full-period actual series
+    df_full = pd.DataFrame({
+        "Date": df.index,
+        "Value": closes.flatten(),
+        "Series": ["Actual Full"] * len(df),
+        "Loss": [None] * len(df),
+        "MAE": [None] * len(df)
+    })
     # predicted on test half
     df_pred = pd.DataFrame({
         "Date": dates_test,
@@ -222,7 +230,8 @@ def update_rnn(store, n_clicks, future_days, nl, u1, u2, u3, lr, epochs):
 
     color_map = {
         "Actual":    my_linelayout["color"],
-        "Predicted": "#ff7b00"
+        "Predicted": "#ff7b00",
+        "Actual Full": my_linelayout["color"],
     }
 
     if future_days > 0:
@@ -252,10 +261,12 @@ def update_rnn(store, n_clicks, future_days, nl, u1, u2, u3, lr, epochs):
             "MAE": [None] * future_days
         })
         # append future to plot_df
-        plot_df = pd.concat([df_actual, df_pred, df_future], ignore_index=True)
+        plot_df = pd.concat([df_full, df_actual, df_pred, df_future], ignore_index=True)
         color_map["Future"] = "#00ccff"
+        color_map["Actual Full"] = my_linelayout["color"]
     else:
-        plot_df = pd.concat([df_actual, df_pred], ignore_index=True)
+        plot_df = pd.concat([df_full, df_actual, df_pred], ignore_index=True)
+        color_map["Actual Full"] = my_linelayout["color"]
 
     fig = px.line(
         plot_df,
@@ -266,16 +277,20 @@ def update_rnn(store, n_clicks, future_days, nl, u1, u2, u3, lr, epochs):
         color_discrete_map=color_map
     )
     fig.layout = my_figlayout
-    # style each trace like step2
-    fig.data[0].line.color = my_linelayout["color"]
-    fig.data[0].line.width = my_linelayout["width"]
-    fig.data[1].line.color = color_map["Predicted"]
-    fig.data[1].line.width = my_linelayout["width"]
-    fig.data[1].line.dash = "dash"
-    if "Future" in color_map:
-        fig.data[2].line.color = color_map["Future"]
-        fig.data[2].line.width = my_linelayout["width"]
-        fig.data[2].line.dash = "dot"
+    # apply custom line styles by series name
+    for trace in fig.data:
+        if trace.name in ["Actual", "Actual Full"]:
+            trace.line.color = my_linelayout["color"]
+            trace.line.width = my_linelayout["width"]
+            trace.line.dash = "solid"
+        elif trace.name == "Predicted":
+            trace.line.color = color_map["Predicted"]
+            trace.line.width = my_linelayout["width"]
+            trace.line.dash = "dash"
+        elif trace.name == "Future":
+            trace.line.color = color_map.get("Future")
+            trace.line.width = my_linelayout["width"]
+            trace.line.dash = "dot"
 
     fig.update_xaxes(tickformat="%b %d, %Y")
     fig.update_yaxes(tickformat=".2f")

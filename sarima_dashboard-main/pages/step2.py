@@ -148,12 +148,14 @@ def rnn_page(store, future_days):
         color_map = {
             "Actual":    my_linelayout["color"],
             "Predicted": "#ff7b00",
-            "Future":    "#00ccff"
+            "Future":    "#00ccff",
+            "Actual Full": "#888888",
         }
     else:
         color_map = {
             "Actual":    my_linelayout["color"],
-            "Predicted": "#ff7b00"
+            "Predicted": "#ff7b00",
+            "Actual Full": "#888888",
         }
 
     # actual-only for first half
@@ -163,6 +165,13 @@ def rnn_page(store, future_days):
         "Series": ["Actual"] * half,
         "Loss": [None] * half
     })
+    # full-period actual series
+    df_full = pd.DataFrame({
+        "Date": df.index,
+        "Value": closes.flatten(),
+        "Series": ["Actual Full"] * len(df),
+        "Loss": [None] * len(df)
+    })
     # predicted vs actual on second half
     df_pred = pd.DataFrame({
         "Date": dates_test,
@@ -171,7 +180,7 @@ def rnn_page(store, future_days):
         "Loss": losses
     })
     # combine
-    df_plot = pd.concat([df_actual, df_pred], ignore_index=True)
+    df_plot = pd.concat([df_full, df_actual, df_pred], ignore_index=True)
     # append future if any
     if future_days > 0:
         df_plot = pd.concat([df_plot, df_future], ignore_index=True)
@@ -186,12 +195,19 @@ def rnn_page(store, future_days):
         color_discrete_map=color_map
     )
     fig.layout = my_figlayout
-    # style traces
+    # apply custom line styles by series name
     for trace in fig.data:
-        if trace.name == "Predicted":
+        if trace.name in ["Actual", "Actual Full"]:
+            trace.line.color = my_linelayout["color"]
+            trace.line.width = my_linelayout["width"]
+            trace.line.dash = "solid"
+        elif trace.name == "Predicted":
+            trace.line.color = color_map["Predicted"]
             trace.line.width = my_linelayout["width"]
             trace.line.dash = "dash"
-        if trace.name == "Future":
+        elif trace.name == "Future":
+            trace.line.color = color_map.get("Future")
+            trace.line.width = my_linelayout["width"]
             trace.line.dash = "dot"
             trace.marker.size = 8
 
