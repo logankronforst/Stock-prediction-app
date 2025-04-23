@@ -8,6 +8,12 @@ import tensorflow as tf
 import plotly.graph_objects as go
 
 from assets.fig_layout import my_figlayout
+try:
+    from pages.step2 import train_rnn_model
+except ImportError:
+    # Fallback stub: returns a constant zero-loss history
+    def train_rnn_model(lr, steps):
+        return [0.0 for _ in range(steps)]
 
 dash.register_page(
     __name__,
@@ -66,6 +72,9 @@ def draw_gradient_descent(store):
     lr = float(store.get("gd_lr", 0.1))
     steps = int(store.get("gd_steps", 50))
 
+    # get RNN training loss history using same lr and step count
+    model_losses = train_rnn_model(lr=lr, steps=steps)
+
     traj = compute_adam_path(initial=(3.0, 3.0), lr=lr, steps=steps, tol=1e-3)
     xs, ys, zs = traj[:, 0], traj[:, 1], traj[:, 2]
 
@@ -74,7 +83,7 @@ def draw_gradient_descent(store):
     loss_ys = 0.5 * ys**2
 
     # surface grid
-    grid = np.linspace(-4, 4, 200)
+    grid = np.linspace(-3, 3, 200)
     Xg, Yg = np.meshgrid(grid, grid)
     Zg = cost_fn(
         tf.constant(Xg, tf.float32),
@@ -90,7 +99,7 @@ def draw_gradient_descent(store):
             xaxis=dict(backgroundcolor='rgba(0,0,0,0)', gridcolor='rgba(61,237,151,0.2)'),
             yaxis=dict(backgroundcolor='rgba(0,0,0,0)', gridcolor='rgba(61,237,151,0.2)'),
             zaxis=dict(backgroundcolor='rgba(0,0,0,0)', gridcolor='rgba(61,237,151,0.2)'),
-            camera=dict(eye=dict(x=2.5, y=2.5, z=1.5))
+            camera=dict(eye=dict(x=1.5, y=1.5, z=1.5))
         )
     )
 
@@ -106,8 +115,8 @@ def draw_gradient_descent(store):
     fig.add_trace(go.Scatter3d(
         x=[xs[0]], y=[ys[0]], z=[zs[0]],
         mode="lines+markers",
-        line=dict(color="red", width=4),
-        marker=dict(size=6, color="red"),
+        line=dict(color="rgb(61,237,151)", width=4),
+        marker=dict(size=6, color="rgb(61,237,151)"),
         name="Loss Path",
         showlegend=True
     ))
@@ -117,9 +126,7 @@ def draw_gradient_descent(store):
         xref="paper", yref="paper",
         x=0.15, y=0.88,
         text=(
-            f"<b>Total Loss:</b> {zs[0]:.4f}"  
-            f"<br><b>x²:</b> {loss_xs[0]:.4f}"  
-            f"<br><b>0.5·y²:</b> {loss_ys[0]:.4f}"
+            f"<b>Training Loss:</b> {model_losses[0]:.4f}"
         ),
         showarrow=False,
         font=dict(color="rgb(61,237,151)", size=16),
@@ -134,14 +141,12 @@ def draw_gradient_descent(store):
         path_frame = go.Scatter3d(
             x=xs[:i+1], y=ys[:i+1], z=zs[:i+1],
             mode="lines+markers",
-            line=dict(color="red", width=4),
-            marker=dict(size=6, color="red")
+            line=dict(color="rgb(61,237,151)", width=4),
+            marker=dict(size=6, color="rgb(61,237,151)")
         )
         ann = dict(initial_ann)
         ann["text"] = (
-            f"<b>Total Loss:</b> {zs[i]:.4f}"  
-            f"<br><b>x²:</b> {loss_xs[i]:.4f}"  
-            f"<br><b>0.5·y²:</b> {loss_ys[i]:.4f}"
+            f"<b>Training Loss:</b> {model_losses[i]:.4f}"
         )
         frames.append(go.Frame(
             name=str(i),
@@ -172,7 +177,7 @@ def draw_gradient_descent(store):
             bgcolor="rgba(0,0,0,0)"
         ),
         margin=dict(l=80, r=80, t=120, b=80),
-        width=1200,
+        # width removed to auto-scale
         height=700
     )
 
