@@ -125,17 +125,27 @@ def update_rnn(store, n_clicks, nl, u1, u2, u3, lr, epochs):
         progress=False
     )
     df.index = df.index.tz_localize(None)
+    # split into training and testing halves
     closes = df["Close"].round(2).values.reshape(-1,1)
-
-    scaler = MinMaxScaler().fit(closes)
-    scaled = scaler.transform(closes)
+    half = len(closes) // 2
+    # scale using training portion only
+    scaler = MinMaxScaler().fit(closes[:half])
+    scaled_full = scaler.transform(closes)
     lookback = 20
-    X, y_true = [], []
-    for i in range(lookback, len(scaled)):
-        X.append(scaled[i-lookback:i,0])
-        y_true.append(scaled[i,0])
-    X = np.array(X)[:,:,None]
-    y_true = np.array(y_true)
+    # prepare training windows
+    X_train, y_train = [], []
+    for i in range(lookback, half):
+        X_train.append(scaled_full[i-lookback:i,0])
+        y_train.append(scaled_full[i,0])
+    X_train = np.array(X_train)[:,:,None]
+    y_train = np.array(y_train)
+    # prepare testing windows
+    X_test, y_test = [], []
+    for i in range(half, len(scaled_full)):
+        X_test.append(scaled_full[i-lookback:i,0])
+        y_test.append(scaled_full[i,0])
+    X_test = np.array(X_test)[:,:,None]
+    y_test = np.array(y_test)
 
     # ── 3) build the variable‐size LSTM
     units = [u1, u2, u3][:nl]
@@ -151,23 +161,37 @@ def update_rnn(store, n_clicks, nl, u1, u2, u3, lr, epochs):
         optimizer=tf.keras.optimizers.Adam(learning_rate=lr),
         loss="mse"
     )
-    model.fit(X, y_true,
+    model.fit(X_train, y_train,
               epochs=epochs,
               batch_size=16,
               verbose=0)
 
     # ── 4) forecast
-    y_pred = scaler.inverse_transform(
-        model.predict(X).reshape(-1,1)
-    ).flatten()
-    dates = df.index[lookback:]
+    # predict on test set
+    y_pred_scaled = model.predict(X_test).flatten()
+    y_pred = scaler.inverse_transform(y_pred_scaled.reshape(-1,1)).flatten()
+    # inverse-transform true values and compute per-sample loss
+    y_true_test = scaler.inverse_transform(y_test.reshape(-1,1)).flatten()
+    losses = np.abs(y_true_test - y_pred)
+    dates_test = df.index[half:]
 
     # ── 5) build your forecast figure
-    plot_df = pd.DataFrame({
-        "Date":   np.concatenate([df.index.values, dates]),
-        "Value":  np.concatenate([closes.flatten(), y_pred]),
-        "Series": ["Actual"]*len(closes) + ["Predicted"]*len(y_pred)
+    # actual for first half
+    df_actual = pd.DataFrame({
+        "Date": df.index[:half],
+        "Value": closes.flatten()[:half],
+        "Series": ["Actual"] * half,
+        "Loss": [None] * half
     })
+    # predicted for second half
+    df_pred = pd.DataFrame({
+        "Date": dates_test,
+        "Value": y_pred,
+        "Series": ["Predicted"] * len(y_pred),
+        "Loss": losses
+    })
+    plot_df = pd.concat([df_actual, df_pred], ignore_index=True)
+
     fig_f = px.line(
         plot_df,
         x="Date", y="Value", color="Series",
@@ -175,7 +199,8 @@ def update_rnn(store, n_clicks, nl, u1, u2, u3, lr, epochs):
         color_discrete_map={
             "Actual":    my_linelayout["color"],
             "Predicted": "#ff7b00"
-        }
+        },
+        custom_data=["Loss"]
     )
     fig_f.layout = my_figlayout
     fig_f.data[0].line = my_linelayout
@@ -183,6 +208,9 @@ def update_rnn(store, n_clicks, nl, u1, u2, u3, lr, epochs):
     fig_f.data[1].line.dash  = "dash"
     fig_f.update_xaxes(tickformat="%b %d, %Y")
     fig_f.update_yaxes(tickformat=".2f")
+    fig_f.update_traces(
+        hovertemplate="%{x|%b %d, %Y}<br>%{series}: %{y:.2f}<br>Loss: %{customdata[0]:.2f}"
+    )
 
     return fig_f
 
@@ -237,5 +265,4 @@ def update_architecture(nl, u1, u2, u3):
         margin=dict(l=10, r=10, t=10, b=10)
     )
     return fig_a
-
 

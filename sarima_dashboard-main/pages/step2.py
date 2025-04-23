@@ -76,18 +76,29 @@ def rnn_page(store, future_days):
     df.index = df.index.tz_localize(None)
     closes = df["Close"].round(2).values.reshape(-1, 1)
 
-    # 3) scale data
-    scaler = MinMaxScaler().fit(closes)
-    scaled = scaler.transform(closes)
+    # split in half for train/test
+    half = len(closes) // 2
 
-    # 4) create LSTM windows
+    # 3) scale data on training portion
+    scaler = MinMaxScaler().fit(closes[:half])
+    scaled_full = scaler.transform(closes)
+
     lookback = 20
-    X, y_true = [], []
-    for i in range(lookback, len(scaled)):
-        X.append(scaled[i-lookback:i, 0])
-        y_true.append(scaled[i, 0])
-    X = np.array(X)[:, :, None]
-    y_true = np.array(y_true)
+    # training windows
+    X_train, y_train = [], []
+    for i in range(lookback, half):
+        X_train.append(scaled_full[i-lookback:i, 0])
+        y_train.append(scaled_full[i, 0])
+    X_train = np.array(X_train)[:, :, None]
+    y_train = np.array(y_train)
+
+    # testing windows
+    X_test, y_test = [], []
+    for i in range(half, len(scaled_full)):
+        X_test.append(scaled_full[i-lookback:i, 0])
+        y_test.append(scaled_full[i, 0])
+    X_test = np.array(X_test)[:, :, None]
+    y_test = np.array(y_test)
 
     # 5) build & train the RNN
     model = tf.keras.Sequential([
@@ -95,30 +106,22 @@ def rnn_page(store, future_days):
         tf.keras.layers.Dense(1)
     ])
     model.compile(optimizer="adam", loss="mse")
-    model.fit(X, y_true, epochs=5, batch_size=16, verbose=0)
+    model.fit(X_train, y_train, epochs=5, batch_size=16, verbose=0)
 
-    # 6) predict on training window and invert scale
-    y_pred_scaled = model.predict(X).flatten()
+    # predict on test set and inverse scale
+    y_pred_scaled = model.predict(X_test).flatten()
     y_pred = scaler.inverse_transform(y_pred_scaled.reshape(-1, 1)).flatten()
-    dates_pred = df.index[lookback:]
-
-    # 7) compute MAE
-    mae = np.mean(np.abs(closes.flatten()[lookback:] - y_pred))
-
-    # 8) prepare DataFrame for plotting actual vs. predicted
-    actual_flat = closes.flatten()
-    predicted_flat = y_pred
-    df_plot = pd.DataFrame({
-        "Date":   np.concatenate([df.index.values, dates_pred]),
-        "Value":  np.concatenate([actual_flat, predicted_flat]),
-        "Series": ["Actual"] * len(actual_flat) + ["Predicted"] * len(predicted_flat),
-        "MAE":    [None] * len(actual_flat) + [mae] * len(predicted_flat)
-    })
+    # true test values back to original scale
+    y_true_test = scaler.inverse_transform(y_test.reshape(-1, 1)).flatten()
+    # compute per-sample absolute error
+    losses = np.abs(y_true_test - y_pred)
+    # corresponding dates for test
+    dates_test = df.index[half:]
 
     # 9) forecast future 'x' days if requested
     future_days = int(future_days or 0)
     if future_days > 0:
-        last_seq = scaled[-lookback:].reshape(1, lookback, 1)
+        last_seq = scaled_full[-lookback:].reshape(1, lookback, 1)
         future_scaled = []
         for _ in range(future_days):
             next_scale = model.predict(last_seq).flatten()[0]
@@ -132,7 +135,7 @@ def rnn_page(store, future_days):
             np.array(future_scaled).reshape(-1, 1)
         ).flatten()
         future_dates = pd.date_range(
-            dates_pred[-1] + pd.Timedelta(days=1),
+            dates_test[-1] + pd.Timedelta(days=1),
             periods=future_days,
             freq="B"
         )
@@ -140,9 +143,8 @@ def rnn_page(store, future_days):
             "Date":   future_dates,
             "Value":  future,
             "Series": ["Future"] * future_days,
-            "MAE":    [None] * future_days
+            "Loss":    [None] * future_days
         })
-        df_plot = pd.concat([df_plot, df_future], ignore_index=True)
         color_map = {
             "Actual":    my_linelayout["color"],
             "Predicted": "#ff7b00",
@@ -154,13 +156,33 @@ def rnn_page(store, future_days):
             "Predicted": "#ff7b00"
         }
 
+    # actual-only for first half
+    df_actual = pd.DataFrame({
+        "Date": df.index[:half],
+        "Value": closes.flatten()[:half],
+        "Series": ["Actual"] * half,
+        "Loss": [None] * half
+    })
+    # predicted vs actual on second half
+    df_pred = pd.DataFrame({
+        "Date": dates_test,
+        "Value": y_pred,
+        "Series": ["Predicted"] * len(y_pred),
+        "Loss": losses
+    })
+    # combine
+    df_plot = pd.concat([df_actual, df_pred], ignore_index=True)
+    # append future if any
+    if future_days > 0:
+        df_plot = pd.concat([df_plot, df_future], ignore_index=True)
+
     # 10) final plot
     fig = px.line(
         df_plot,
         x="Date", y="Value",
         color="Series", markers=True,
-        custom_data=["MAE"],
-        title=f"{t} – Actual vs RNN Forecast",
+        custom_data=["Loss"],
+        title=f"{t} – Actual vs RNN Forecast",
         color_discrete_map=color_map
     )
     fig.layout = my_figlayout
@@ -172,6 +194,11 @@ def rnn_page(store, future_days):
         if trace.name == "Future":
             trace.line.dash = "dot"
             trace.marker.size = 8
+
+    # show per-point loss in tooltip
+    fig.update_traces(
+        hovertemplate="%{x|%b %d, %Y}<br>%{series}: %{y:.2f}<br>Loss: %{customdata[0]:.4f}"  # adjust format as needed
+    )
 
     fig.update_xaxes(tickformat="%b %d, %Y")
     fig.update_yaxes(tickformat=".2f")

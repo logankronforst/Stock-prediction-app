@@ -45,7 +45,7 @@ layout = dbc.Container(fluid=True, children=[
             dcc.Graph(
                 id="fig-gd3",
                 style={
-                    "width": "95vw",
+                    "width": "98vw",
                     "height": "700px",
                     "margin": "0 auto"
                 }
@@ -68,6 +68,10 @@ def draw_gradient_descent(store):
 
     traj = compute_adam_path(initial=(3.0, 3.0), lr=lr, steps=steps, tol=1e-3)
     xs, ys, zs = traj[:, 0], traj[:, 1], traj[:, 2]
+
+    # per-feature loss contributions
+    loss_xs = xs**2
+    loss_ys = 0.5 * ys**2
 
     # surface grid
     grid = np.linspace(-4, 4, 200)
@@ -112,7 +116,11 @@ def draw_gradient_descent(store):
     initial_ann = dict(
         xref="paper", yref="paper",
         x=0.15, y=0.88,
-        text=f"<b>Loss:</b> {zs[0]:.4f}",
+        text=(
+            f"<b>Total Loss:</b> {zs[0]:.4f}"  
+            f"<br><b>x²:</b> {loss_xs[0]:.4f}"  
+            f"<br><b>0.5·y²:</b> {loss_ys[0]:.4f}"
+        ),
         showarrow=False,
         font=dict(color="rgb(61,237,151)", size=16),
         bgcolor="rgba(0,0,0,0.6)",
@@ -130,7 +138,11 @@ def draw_gradient_descent(store):
             marker=dict(size=6, color="red")
         )
         ann = dict(initial_ann)
-        ann["text"] = f"<b>Loss:</b> {zs[i]:.4f}"
+        ann["text"] = (
+            f"<b>Total Loss:</b> {zs[i]:.4f}"  
+            f"<br><b>x²:</b> {loss_xs[i]:.4f}"  
+            f"<br><b>0.5·y²:</b> {loss_ys[i]:.4f}"
+        )
         frames.append(go.Frame(
             name=str(i),
             data=[path_frame],
